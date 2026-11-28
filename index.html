@@ -517,7 +517,7 @@ audio{width:100%;height:36px}
         <button class="choice-btn secondary" id="playToEnd">
             ▶ قراءة من هذه الآية إلى آخر السورة
         </button>
-
+        <button class="choice-btn secondary" id="memorizeFromHere">تسميع من هذه الآية إلى آخر السورة 🎙️</button>
         <button class="cancel-btn" id="cancelChoice">إلغاء</button>
     </div>
 </div>
@@ -1158,7 +1158,44 @@ memorizationButton.style.cssText = `
 `;
 
 document.body.appendChild(memorizationButton);
+if (typeof startFromAyahIndex === "undefined") { var startFromAyahIndex = 0; } else { startFromAyahIndex = 0; }
+ startFromAyahIndex = 0;
 
+function getSelectedAyahIdx() {
+  if (typeof selectedAyahIndex !== "undefined" && typeof selectedAyahIndex === "number" && selectedAyahIndex >= 0) {
+    return selectedAyahIndex;
+  }
+  if (typeof currentAyahIndex !== "undefined" && typeof currentAyahIndex === "number" && currentAyahIndex >= 0) {
+    return currentAyahIndex;
+  }
+  return 0;
+}
+
+const memorizeFromHereBtn = document.getElementById("memorizeFromHere");
+if (memorizeFromHereBtn) {
+  memorizeFromHereBtn.addEventListener("click", function() {
+    startFromAyahIndex = getSelectedAyahIdx();
+    if (typeof recitationAyahIndex !== "undefined") { recitationAyahIndex = startFromAyahIndex; }
+    if (typeof choicePopup !== "undefined" && choicePopup) {
+      choicePopup.style.display = "none";
+    }
+    if (typeof ayahsList !== "undefined" && ayahsList) {
+      Array.from(ayahsList.children).forEach(function(ayahEl, i) {
+        if (i >= startFromAyahIndex) {
+          ayahEl.querySelectorAll(".quran-word").forEach(function(w) {
+            w.style.display = "none";
+          });
+          ayahEl.querySelectorAll(".ayah-num").forEach(function(n) {
+            n.style.display = "none";
+          });
+        }
+      });
+    }
+    if (typeof memorizationButton !== "undefined" && memorizationButton && !isMemorizing) {
+      memorizationButton.click();
+    }
+  });
+}
 if (SpeechRecognition) {
 
     recognition = new SpeechRecognition();
@@ -1350,7 +1387,7 @@ if (recognition) {
 
     recognition.onstart = function() {
         
-        recitationAyahIndex = 0;
+        recitationAyahIndex = startFromAyahIndex;
         recitationWordIndex = 0;
         nextSpeechResultIndex = 0;
     };
@@ -1427,7 +1464,7 @@ function checkMatch(expected, spoken) {
   for (let char of w1) {
     if (w2.includes(char)) matches++;
   }
-  return (matches / Math.max(w1.length, w2.length)) >= 0.45;
+  return (matches / Math.max(w1.length, w2.length)) >= 0.25;
 }
 
 normalizeSpeechWord = cleanText;
@@ -1453,16 +1490,10 @@ processSpokenWords = function(newWords) {
     let target = words[idx].textContent;
     if (checkMatch(target, sp)) {
       fixed.push(sp);
-    } else if (idx + 1 < words.length && checkMatch(words[idx + 1].textContent, sp)) {
-      fixed.push(target);
-      fixed.push(sp);
-    } else if (idx + 2 < words.length && checkMatch(words[idx + 2].textContent, sp)) {
-      fixed.push(target);
-      fixed.push(words[idx + 1].textContent);
-      fixed.push(sp);
     } else {
-      fixed.push(sp);
-    }
+  fixed.push(sp);
+}
+
   }
   oldProcess(fixed.join(" "));
 };
@@ -1511,7 +1542,7 @@ document.addEventListener("ended", function() {
 const originalMinshawy = playMinshawyCorrection;
 playMinshawyCorrection = function(surahNum, ayahNum) {
   savedAyahPos = recitationAyahIndex;
-  savedWordPos = Math.max(0, recitationWordIndex - 1);
+  savedWordPos = recitationWordIndex;
   isSheikhSpeaking = true;
 
   // أمان إضافي: يفتح المايك أوتوماتيك لو الصوت طول أو حصل فيه أي مشكلة
